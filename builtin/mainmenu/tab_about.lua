@@ -7,21 +7,26 @@ local function prepare_credits(dest, source)
 		return
 	end
 
-	local names = {}
+	local lines = {}
+
 	for _, name in ipairs(source) do
-		if type(name) == "string" then
-			names[#names + 1] = name
+		if type(name) == "string" and name ~= "" then
+			-- Escape names so special characters are safe in hypertext.
+			local escaped = core.hypertext_escape(name)
+
+			-- Color role labels such as [Engine founder] grey.
+			escaped = escaped:gsub(
+				"%[([^%]]*)%]",
+				"<gray>[%1]</gray>"
+			)
+
+			lines[#lines + 1] = escaped
 		end
 	end
 
-	if #names == 0 then
-		return
+	if #lines > 0 then
+		table.insert(dest, table.concat(lines, "\n"))
 	end
-
-	local text = table.concat(names, "\n") .. "\n"
-	text = core.hypertext_escape(text)
-	text = text:gsub("%[.-%]", "<gray>%1</gray>")
-	table.insert(dest, text)
 end
 
 local function get_credits()
@@ -29,6 +34,7 @@ local function get_credits()
 	local file = io.open(path, "r")
 
 	if not file then
+		core.log("warning", "[About] Could not open " .. path)
 		return {}
 	end
 
@@ -36,11 +42,14 @@ local function get_credits()
 	file:close()
 
 	if not contents then
+		core.log("warning", "[About] Could not read credits.json")
 		return {}
 	end
 
 	local ok, credits = pcall(core.parse_json, contents)
+
 	if not ok or type(credits) ~= "table" then
+		core.log("error", "[About] Failed to parse credits.json")
 		return {}
 	end
 
@@ -76,20 +85,28 @@ return {
 		local version = core.get_version()
 
 		local hypertext = {
-			"<tag name=heading color=#ff0>",
-			"<tag name=gray color=#aaa>",
+			"<tag name=heading color=#ffff00>",
+			"<tag name=gray color=#aaaaaa>",
 		}
 
 		local credits = get_credits()
+		local developers = credits.core_developers
 
-		-- Display only core_developers from credits.json.
-		if type(credits.core_developers) == "table" then
+		if type(developers) == "table" then
 			table.insert_all(hypertext, {
 				"<heading>",
 				core.hypertext_escape(fgettext_ne("Core Developers")),
 				"</heading>\n",
 			})
-			prepare_credits(hypertext, credits.core_developers)
+
+			prepare_credits(hypertext, developers)
+		else
+			core.log("warning",
+				"[About] credits.json has no core_developers array")
+			table.insert(hypertext,
+				core.hypertext_escape(
+					fgettext_ne("Core developers credits unavailable.")
+				))
 		end
 
 		local credits_text = table.concat(hypertext)
@@ -98,10 +115,14 @@ return {
 			"image[1,0.5;3.4,3.4;",
 			core.formspec_escape(logofile),
 			"]",
+
 			"style_type[label;valign=center;halign=center;font=mono,bold;font_size=*1.1]",
 			"label[0.1,4;5.4,0.6;",
-			core.formspec_escape(version.project .. " " .. version.string),
+			core.formspec_escape(
+				version.project .. " " .. version.string
+			),
 			"]",
+
 			"style_type[button_url;border=false;textcolor=#4cd9f9]",
 			"button_url[1.5,4.6;2.5,0.5;homepage;luanti.org;https://www.luanti.org/]",
 		}
@@ -109,17 +130,20 @@ return {
 		if PLATFORM == "Android" then
 			fs[#fs + 1] =
 				"button[0.5,5.1;4.5,0.8;share_debug;" ..
-				fgettext("Share debug log") .. "]"
+				core.formspec_escape(fgettext("Share debug log")) .. "]"
 		else
 			fs[#fs + 1] =
 				"tooltip[userdata;" ..
-				fgettext(
+				core.formspec_escape(fgettext(
 					"Opens the directory that contains user-provided worlds, games, mods,\n" ..
 					"and texture packs in a file manager / explorer."
-				) .. "]"
+				)) .. "]"
+
 			fs[#fs + 1] =
 				"button[0.5,5.1;4.5,0.8;userdata;" ..
-				fgettext("Open User Data Directory") .. "]"
+				core.formspec_escape(
+					fgettext("Open User Data Directory")
+				) .. "]"
 		end
 
 		local active_renderer_info =
@@ -131,6 +155,7 @@ return {
 			"textarea[0.1,6;5.4,1;;",
 			active_renderer_info,
 			";]",
+
 			"hypertext[5.5,0.25;9.75,6.6;credits;",
 			core.formspec_escape(credits_text),
 			"]",
