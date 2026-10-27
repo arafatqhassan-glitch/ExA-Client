@@ -1,5 +1,4 @@
-
-name: ExA-Client Android
+name: android
 
 on:
   workflow_dispatch:
