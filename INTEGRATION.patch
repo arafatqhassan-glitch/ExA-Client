@@ -1,0 +1,12 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -1,4 +1,8 @@
+ 	if(PRECOMPILE_HEADERS)
+ 		target_precompile_headers(${PROJECT_NAME} PRIVATE ${PRECOMPILED_HEADERS_LIST})
+ 	endif()
++	# Optional Rust performance core; original C++ engine remains intact.
++	if(ANDROID AND EXISTS "${CMAKE_SOURCE_DIR}/cmake/ExAClientRust.cmake")
++		include("${CMAKE_SOURCE_DIR}/cmake/ExAClientRust.cmake")
++	endif()
+ endif(BUILD_CLIENT)
