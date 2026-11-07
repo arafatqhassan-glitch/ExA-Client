@@ -1,0 +1,10 @@
+[package]
+name = "exa-client-rust"
+version = "1.5.1"
+edition = "2024"
+
+[lib]
+name = "exa_client"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
